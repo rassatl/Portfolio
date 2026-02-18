@@ -1,7 +1,9 @@
 <script setup>
 import { ref, onMounted } from 'vue'
+import { useApiCache } from '../composables/useApiCache'
 
 const API_URL = 'http://127.0.0.1:8000'
+const { fetchWithCache } = useApiCache()
 
 // Mock data statiques
 const profile = ref({
@@ -26,8 +28,7 @@ const contact = ref({
 onMounted(async () => {
   try {
     // Récupérer les expériences
-    const expResponse = await fetch(`${API_URL}/experiences?sort=-date_debut`)
-    const expData = await expResponse.json()
+    const expData = await fetchWithCache(`${API_URL}/experiences?sort=-date_debut`)
     
     // Mapper les expériences pour la timeline
     experiences.value = expData.experiences.map(exp => ({
@@ -38,13 +39,11 @@ onMounted(async () => {
     }))
 
     // Récupérer les compétences top
-    const skillsResponse = await fetch(`${API_URL}/skills/top?k=10`)
-    const skillsData = await skillsResponse.json()
+    const skillsData = await fetchWithCache(`${API_URL}/skills/top?k=10`)
     profile.value.skills = skillsData.skills.map(s => s.nom)
 
     // Récupérer quelques projets pour la section "Projets Principaux"
-    const projectsResponse = await fetch(`${API_URL}/projects/search`)
-    const projectsData = await projectsResponse.json()
+    const projectsData = await fetchWithCache(`${API_URL}/projects/search`)
     mainProjects.value = projectsData.projects.slice(0, 3).map(p => ({
       id: p.id,
       title: p.titre,

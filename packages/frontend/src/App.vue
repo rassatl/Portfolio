@@ -5,7 +5,11 @@ import Navigation from './components/Navigation.vue'
 <template>
   <div id="app" class="min-h-screen">
     <Navigation />
-    <RouterView />
+    <RouterView v-slot="{ Component }">
+      <keep-alive>
+        <component :is="Component" />
+      </keep-alive>
+    </RouterView>
   </div>
 </template>
 

@@ -1,7 +1,9 @@
 <script setup>
 import { ref, onMounted } from 'vue'
+import { useApiCache } from '../composables/useApiCache'
 
 const API_URL = 'http://127.0.0.1:8000'
+const { fetchWithCache } = useApiCache()
 
 const allProjects = ref([])
 const loading = ref(true)
@@ -10,8 +12,7 @@ const error = ref(null)
 // Récupération des projets depuis l'API
 onMounted(async () => {
   try {
-    const response = await fetch(`${API_URL}/projects/search`)
-    const data = await response.json()
+    const data = await fetchWithCache(`${API_URL}/projects/search`)
     
     allProjects.value = data.projects.map(p => ({
       id: p.id,
