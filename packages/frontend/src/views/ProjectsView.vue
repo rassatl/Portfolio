@@ -1,20 +1,67 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useApiCache } from '../composables/useApiCache'
 
 const API_URL = 'http://127.0.0.1:8000'
 const { fetchWithCache } = useApiCache()
 
 const allProjects = ref([])
+const allSkills = ref([])
 const loading = ref(true)
 const error = ref(null)
+
+// Filtres
+const searchQuery = ref('')
+const selectedSkills = ref([])
+
+// Projets filtrés
+const filteredProjects = computed(() => {
+  let projects = allProjects.value
+
+  // Filtre par recherche texte
+  if (searchQuery.value.trim()) {
+    const query = searchQuery.value.toLowerCase()
+    projects = projects.filter(p => 
+      p.title.toLowerCase().includes(query) || 
+      (p.description && p.description.toLowerCase().includes(query))
+    )
+  }
+
+  // Filtre par compétences sélectionnées
+  if (selectedSkills.value.length > 0) {
+    projects = projects.filter(p => 
+      p.skills && selectedSkills.value.some(skill => p.skills.includes(skill))
+    )
+  }
+
+  return projects
+})
+
+// Toggle skill filter
+function toggleSkill(skill) {
+  const index = selectedSkills.value.indexOf(skill)
+  if (index === -1) {
+    selectedSkills.value.push(skill)
+  } else {
+    selectedSkills.value.splice(index, 1)
+  }
+}
+
+// Reset filters
+function resetFilters() {
+  searchQuery.value = ''
+  selectedSkills.value = []
+}
 
 // Récupération des projets depuis l'API
 onMounted(async () => {
   try {
-    const data = await fetchWithCache(`${API_URL}/projects/search`)
+    const [projectsData, skillsData] = await Promise.all([
+      fetchWithCache(`${API_URL}/projects/search`),
+      fetchWithCache(`${API_URL}/skills/top?k=20`)
+    ])
     
-    allProjects.value = data.projects.map(p => ({
+    allProjects.value = projectsData.projects.map(p => ({
       id: p.id,
       title: p.titre,
       description: p.description,
@@ -23,6 +70,8 @@ onMounted(async () => {
       lien: p.lien_url,
       skills: p.skills || []
     }))
+
+    allSkills.value = skillsData.skills.map(s => s.nom)
     
     loading.value = false
   } catch (err) {
@@ -59,9 +108,79 @@ onMounted(async () => {
       </h1>
       
       <p v-if="loading" class="h-6 w-80 bg-gray-300 rounded animate-pulse mx-auto mb-12"></p>
-      <p v-else class="text-center text-gray-600 mb-12 text-lg">
+      <p v-else class="text-center text-gray-600 mb-8 text-lg">
         Découvrez l'ensemble de mes réalisations techniques
       </p>
+      
+      <!-- Section Filtres -->
+      <div v-if="!loading" class="bg-white rounded-xl shadow-md p-6 mb-8 border-2 border-green-300">
+        <!-- Barre de recherche -->
+        <div class="mb-6">
+          <label class="block text-sm font-semibold text-gray-700 mb-2">
+            🔍 Rechercher un projet
+          </label>
+          <input
+            v-model="searchQuery"
+            type="text"
+            placeholder="Titre ou description..."
+            class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-green-500 focus:outline-none transition-colors"
+          />
+        </div>
+
+        <!-- Filtres par compétences -->
+        <div>
+          <div class="flex items-center justify-between mb-3">
+            <label class="block text-sm font-semibold text-gray-700">
+              🏷️ Filtrer par compétences
+            </label>
+            <button
+              v-if="selectedSkills.length > 0 || searchQuery"
+              @click="resetFilters"
+              class="text-sm text-red-600 hover:text-red-700 font-medium underline"
+            >
+              Réinitialiser
+            </button>
+          </div>
+          <div class="flex flex-wrap gap-2">
+            <button
+              v-for="skill in allSkills"
+              :key="skill"
+              @click="toggleSkill(skill)"
+              :class="[
+                'px-4 py-2 rounded-full text-sm font-medium transition-all duration-200',
+                selectedSkills.includes(skill)
+                  ? 'bg-green-600 text-white shadow-md scale-105'
+                  : 'bg-gray-100 text-gray-700 hover:bg-green-100 hover:text-green-700'
+              ]"
+            >
+              {{ skill }}
+              <span v-if="selectedSkills.includes(skill)" class="ml-1">✓</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Compteur de résultats -->
+        <div class="mt-4 text-center text-sm text-gray-600">
+          <span class="font-semibold">{{ filteredProjects.length }}</span>
+          projet{{ filteredProjects.length > 1 ? 's' : '' }} trouvé{{ filteredProjects.length > 1 ? 's' : '' }}
+          <span v-if="selectedSkills.length > 0 || searchQuery" class="text-green-700">
+            ({{ allProjects.length }} au total)
+          </span>
+        </div>
+      </div>
+      
+      <!-- Message si aucun résultat -->
+      <div v-if="!loading && filteredProjects.length === 0" class="text-center py-12">
+        <div class="text-6xl mb-4">🔍</div>
+        <h3 class="text-2xl font-bold text-gray-700 mb-2">Aucun projet trouvé</h3>
+        <p class="text-gray-600 mb-4">Essayez de modifier vos filtres ou votre recherche</p>
+        <button
+          @click="resetFilters"
+          class="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+        >
+          Réinitialiser les filtres
+        </button>
+      </div>
       
       <div v-if="loading" class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
         <div v-for="n in 6" :key="n" class="bg-white rounded-xl shadow-lg p-6 border-2 border-green-300">
@@ -77,9 +196,9 @@ onMounted(async () => {
           <div class="h-6 w-24 bg-gray-300 rounded animate-pulse"></div>
         </div>
       </div>
-      <div v-else class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+      <div v-else-if="filteredProjects.length > 0" class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
         <div
-          v-for="project in allProjects"
+          v-for="project in filteredProjects"
           :key="project.id"
           class="bg-white rounded-xl shadow-lg p-6 hover:shadow-2xl transition-all duration-300 hover:-translate-y-1 border-2 border-green-300"
         >
