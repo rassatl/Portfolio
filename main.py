@@ -115,11 +115,16 @@ def search_projects(query: str | None = None, skills: str | None = None):
         params.append(skill_list)
 
     where_sql = " WHERE " + " AND ".join(where_clauses) if where_clauses else ""
+    
+    # Récupérer les projets avec leurs compétences agrégées
     sql = (
-        "SELECT DISTINCT p.* "
-        "FROM projet p"
+        "SELECT p.*, "
+        "COALESCE(array_agg(c.nom) FILTER (WHERE c.nom IS NOT NULL), '{}') AS skills "
+        "FROM projet p "
+        "LEFT JOIN projet_competence pc ON pc.projet_id = p.id "
+        "LEFT JOIN competence c ON c.id = pc.competence_id"
         + where_sql
-        + " ORDER BY p.date_projet DESC NULLS LAST;"
+        + " GROUP BY p.id ORDER BY p.date_projet DESC NULLS LAST;"
     )
     rows = run_query(sql, params)
     return {"projects": rows}
@@ -174,7 +179,16 @@ def featured_projects(limit: int = 3):
     if limit <= 0 or limit > 10:
         raise HTTPException(status_code=400, detail="limit must be between 1 and 10")
     
-    sql = "SELECT * FROM projet ORDER BY date_projet DESC NULLS LAST LIMIT %s;"
+    sql = (
+        "SELECT p.*, "
+        "COALESCE(array_agg(c.nom) FILTER (WHERE c.nom IS NOT NULL), '{}') AS skills "
+        "FROM projet p "
+        "LEFT JOIN projet_competence pc ON pc.projet_id = p.id "
+        "LEFT JOIN competence c ON c.id = pc.competence_id "
+        "GROUP BY p.id "
+        "ORDER BY p.date_projet DESC NULLS LAST "
+        "LIMIT %s;"
+    )
     rows = run_query(sql, (limit,))
     return {"projects": rows}
 

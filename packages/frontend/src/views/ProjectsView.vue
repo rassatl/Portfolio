@@ -20,7 +20,8 @@ onMounted(async () => {
       description: p.description,
       date: p.date_projet || 'N/A',
       github: p.github_url || '#',
-      lien: p.lien_url
+      lien: p.lien_url,
+      skills: p.skills || []
     }))
     
     loading.value = false
@@ -35,7 +36,8 @@ onMounted(async () => {
         title: 'Portfolio Dynamique',
         description: 'Application portfolio complète',
         date: '2024',
-        github: '#'
+        github: '#',
+        skills: []
       }
     ]
     loading.value = false
@@ -89,6 +91,19 @@ onMounted(async () => {
           <p class="text-gray-600 mb-4 leading-relaxed">
             {{ project.description || 'Aucune description disponible' }}
           </p>
+          
+          <!-- Tags de compétences -->
+          <div v-if="project.skills && project.skills.length > 0" class="mb-4">
+            <div class="flex flex-wrap gap-2">
+              <span
+                v-for="skill in project.skills"
+                :key="skill"
+                class="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium"
+              >
+                {{ skill }}
+              </span>
+            </div>
+          </div>
           
           <div class="flex gap-3">
             <a

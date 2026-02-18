@@ -53,7 +53,8 @@ onMounted(async () => {
         mainProjects.value = projectsData.projects.map(p => ({
           id: p.id,
           title: p.titre,
-          description: p.description
+          description: p.description,
+          skills: p.skills || []
         }))
         loadingProjects.value = false
       })
@@ -164,43 +165,89 @@ function getExperienceIcon(poste) {
         <h2 v-if="loading" class="h-12 w-64 bg-gray-300 rounded-lg animate-pulse mx-auto mb-16"></h2>
         <h2 v-else class="text-4xl font-bold text-center text-gray-800 mb-16">Mon Parcours</h2>
         
-        <!-- Timeline horizontale sur desktop, verticale sur mobile -->
-        <div v-if="loading" class="flex flex-col md:flex-row items-center justify-center gap-4 md:gap-8">
-          <div v-for="n in 3" :key="n" class="flex flex-col md:flex-row items-center">
-            <div class="flex flex-col items-center">
-              <div class="w-24 h-24 md:w-28 md:h-28 rounded-full bg-gray-300 animate-pulse shadow-xl"></div>
-              <div class="mt-4 text-center space-y-2">
-                <div class="h-6 w-32 bg-gray-300 rounded animate-pulse mx-auto"></div>
-                <div class="h-4 w-24 bg-gray-300 rounded animate-pulse mx-auto"></div>
+        <!-- Timeline avec skeleton -->
+        <div v-if="loading" class="relative">
+          <!-- Ligne centrale skeleton -->
+          <div class="hidden md:block absolute left-1/2 transform -translate-x-1/2 w-1 h-full bg-gray-200"></div>
+          
+          <div class="space-y-12 md:space-y-24">
+            <div v-for="n in 3" :key="n" class="relative">
+              <div class="flex flex-col md:flex-row items-center justify-center gap-8">
+                <div class="md:w-5/12 order-2 md:order-1">
+                  <div class="bg-gray-100 rounded-xl p-6 shadow-md">
+                    <div class="h-6 bg-gray-300 rounded animate-pulse mb-2"></div>
+                    <div class="h-4 bg-gray-300 rounded animate-pulse w-32"></div>
+                  </div>
+                </div>
+                <div class="order-1 md:order-2 relative z-10">
+                  <div class="w-16 h-16 rounded-full bg-gray-300 animate-pulse shadow-xl"></div>
+                </div>
+                <div class="md:w-5/12 order-3"></div>
               </div>
-            </div>
-            <div v-if="n < 3" class="flex items-center justify-center my-4 md:my-0 md:mx-6">
-              <div class="hidden md:block text-4xl text-gray-300">→</div>
-              <div class="md:hidden text-4xl text-gray-300 rotate-90">→</div>
             </div>
           </div>
         </div>
-        <div v-else class="flex flex-col md:flex-row items-center justify-center gap-4 md:gap-8">
-          <div
-            v-for="(exp, index) in experiences"
-            :key="exp.id"
-            class="flex flex-col md:flex-row items-center"
-          >
-            <!-- Point de timeline -->
-            <div class="flex flex-col items-center">
-              <div class="w-24 h-24 md:w-28 md:h-28 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-4xl shadow-xl">
-                {{ exp.icon }}
-              </div>
-              <div class="mt-4 text-center">
-                <h3 class="text-xl font-bold text-gray-800">{{ exp.title }}</h3>
-                <p class="text-sm text-gray-600">{{ exp.year }}</p>
+        
+        <!-- Timeline réelle -->
+        <div v-else class="relative">
+          <!-- Ligne centrale (desktop only) -->
+          <div class="hidden md:block absolute left-1/2 transform -translate-x-1/2 w-1 h-full bg-gradient-to-b from-blue-400 via-blue-500 to-blue-600"></div>
+          
+          <!-- Mobile: ligne verticale à gauche -->
+          <div class="md:hidden absolute left-8 top-0 w-1 h-full bg-gradient-to-b from-blue-400 via-blue-500 to-blue-600"></div>
+          
+          <div class="space-y-12 md:space-y-24">
+            <div
+              v-for="(exp, index) in experiences"
+              :key="exp.id"
+              class="relative"
+            >
+              <!-- Desktop: alternance gauche/droite -->
+              <div class="flex flex-col md:flex-row items-center md:items-stretch justify-center gap-8">
+                <!-- Carte à gauche (desktop) ou toujours à droite (mobile) -->
+                <div 
+                  :class="[
+                    'md:w-5/12',
+                    index % 2 === 0 ? 'order-2 md:order-1 md:text-right' : 'order-2 md:order-3 md:text-left'
+                  ]"
+                >
+                  <div 
+                    class="bg-white rounded-xl p-6 shadow-lg hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 border-2 border-blue-200 ml-12 md:ml-0"
+                    :class="index % 2 === 0 ? '' : 'md:ml-0'"
+                  >
+                    <div class="flex items-center gap-3 mb-2" :class="index % 2 === 0 ? 'md:flex-row-reverse md:justify-start' : ''">
+                      <span class="text-4xl">{{ exp.icon }}</span>
+                      <h3 class="text-2xl font-bold text-gray-800">{{ exp.title }}</h3>
+                    </div>
+                    <p class="text-blue-600 font-semibold text-sm">{{ exp.year }}</p>
+                  </div>
+                </div>
+                
+                <!-- Point central -->
+                <div class="order-1 md:order-2 absolute left-8 md:relative md:left-0 z-10 flex items-center">
+                  <div class="w-16 h-16 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center shadow-xl border-4 border-white">
+                    <div class="w-3 h-3 rounded-full bg-white"></div>
+                  </div>
+                </div>
+                
+                <!-- Espace vide de l'autre côté -->
+                <div 
+                  :class="[
+                    'md:w-5/12',
+                    index % 2 === 0 ? 'order-3' : 'order-1'
+                  ]"
+                  class="hidden md:block"
+                ></div>
               </div>
             </div>
-            
-            <!-- Flèche de connexion (sauf après le dernier) -->
-            <div v-if="index < experiences.length - 1" class="flex items-center justify-center my-4 md:my-0 md:mx-6">
-              <div class="hidden md:block text-4xl text-blue-400">→</div>
-              <div class="md:hidden text-4xl text-blue-400 rotate-90">→</div>
+          </div>
+          
+          <!-- Point final de la timeline -->
+          <div class="relative mt-12 flex items-center justify-center md:justify-center">
+            <div class="absolute left-8 md:relative md:left-0">
+              <div class="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shadow-xl border-4 border-white">
+                <span class="text-xl">🚀</span>
+              </div>
             </div>
           </div>
         </div>
@@ -230,7 +277,18 @@ function getExperienceIcon(poste) {
             class="bg-white rounded-xl shadow-lg p-6 hover:shadow-2xl transition-shadow duration-300 border-2 border-yellow-300"
           >
             <h3 class="text-2xl font-bold text-gray-800 mb-3">{{ project.title }}</h3>
-            <p class="text-gray-600 leading-relaxed">{{ project.description }}</p>
+            <p class="text-gray-600 leading-relaxed mb-4">{{ project.description }}</p>
+            
+            <!-- Tags de compétences -->
+            <div v-if="project.skills && project.skills.length > 0" class="flex flex-wrap gap-2">
+              <span
+                v-for="skill in project.skills"
+                :key="skill"
+                class="px-3 py-1 bg-yellow-100 text-yellow-700 rounded-full text-xs font-medium"
+              >
+                {{ skill }}
+              </span>
+            </div>
           </div>
         </div>
         
