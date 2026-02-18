@@ -167,6 +167,18 @@ def similar_projects(project_id: int, k: int = 5):
     rows = run_query(sql, (project_id, project_id, k))
     return {"projects": rows}
 
+
+@app.get("/projects/featured")
+def featured_projects(limit: int = 3):
+    """Endpoint optimisé pour la page d'accueil - retourne uniquement les projets principaux"""
+    if limit <= 0 or limit > 10:
+        raise HTTPException(status_code=400, detail="limit must be between 1 and 10")
+    
+    sql = "SELECT * FROM projet ORDER BY date_projet DESC NULLS LAST LIMIT %s;"
+    rows = run_query(sql, (limit,))
+    return {"projects": rows}
+
+
 @app.get("/items/{item_id}")
 def read_item(item_id: int, q: Union[str, None] = None):
     return {"item_id": item_id, "q": q}

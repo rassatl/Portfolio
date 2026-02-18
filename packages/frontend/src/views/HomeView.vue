@@ -16,6 +16,7 @@ const profile = ref({
 const experiences = ref([])
 const mainProjects = ref([])
 const loading = ref(true)
+const loadingProjects = ref(true)
 const error = ref(null)
 
 const contact = ref({
@@ -27,8 +28,11 @@ const contact = ref({
 // Récupération des données depuis l'API
 onMounted(async () => {
   try {
-    // Récupérer les expériences
-    const expData = await fetchWithCache(`${API_URL}/experiences?sort=-date_debut`)
+    // Charger en priorité : expériences + compétences (contenu critique)
+    const [expData, skillsData] = await Promise.all([
+      fetchWithCache(`${API_URL}/experiences?sort=-date_debut`),
+      fetchWithCache(`${API_URL}/skills/top?k=10`)
+    ])
     
     // Mapper les expériences pour la timeline
     experiences.value = expData.experiences.map(exp => ({
@@ -38,19 +42,27 @@ onMounted(async () => {
       icon: getExperienceIcon(exp.poste)
     }))
 
-    // Récupérer les compétences top
-    const skillsData = await fetchWithCache(`${API_URL}/skills/top?k=10`)
+    // Mapper les compétences
     profile.value.skills = skillsData.skills.map(s => s.nom)
-
-    // Récupérer quelques projets pour la section "Projets Principaux"
-    const projectsData = await fetchWithCache(`${API_URL}/projects/search`)
-    mainProjects.value = projectsData.projects.slice(0, 3).map(p => ({
-      id: p.id,
-      title: p.titre,
-      description: p.description
-    }))
     
     loading.value = false
+
+    // Charger les projets principaux en différé (non-bloquant)
+    fetchWithCache(`${API_URL}/projects/featured?limit=3`)
+      .then(projectsData => {
+        mainProjects.value = projectsData.projects.map(p => ({
+          id: p.id,
+          title: p.titre,
+          description: p.description
+        }))
+        loadingProjects.value = false
+      })
+      .catch(err => {
+        console.error('Erreur chargement projets principaux:', err)
+        mainProjects.value = []
+        loadingProjects.value = false
+      })
+    
   } catch (err) {
     console.error('Erreur lors du chargement des données:', err)
     error.value = 'Erreur de chargement des données'
@@ -198,10 +210,10 @@ function getExperienceIcon(poste) {
     <!-- Section 3: Projets Principaux (Jaune Clair) -->
     <section class="bg-pastel-yellow py-20 px-6">
       <div class="container mx-auto max-w-6xl">
-        <h2 v-if="loading" class="h-12 w-80 bg-gray-300 rounded-lg animate-pulse mx-auto mb-12"></h2>
+        <h2 v-if="loadingProjects" class="h-12 w-80 bg-gray-300 rounded-lg animate-pulse mx-auto mb-12"></h2>
         <h2 v-else class="text-4xl font-bold text-center text-gray-800 mb-12">Projets Principaux</h2>
         
-        <div v-if="loading" class="grid md:grid-cols-3 gap-8">
+        <div v-if="loadingProjects" class="grid md:grid-cols-3 gap-8">
           <div v-for="n in 3" :key="n" class="bg-white rounded-xl shadow-lg p-6 border-2 border-yellow-300">
             <div class="h-8 bg-gray-300 rounded animate-pulse mb-3"></div>
             <div class="space-y-2">
