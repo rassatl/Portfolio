@@ -17,9 +17,9 @@ const loading = ref(true)
 const error = ref(null)
 
 const contact = ref({
-  email: 'jean.dupont@example.com',
-  github: 'https://github.com/jeandupont',
-  linkedin: 'https://linkedin.com/in/jeandupont'
+  email: 'lou.rassat2003@gmail.com',
+  github: 'https://github.com/rassatl',
+  linkedin: 'https://linkedin.com/in/lou-rassat'
 })
 
 // Récupération des données depuis l'API
@@ -87,48 +87,52 @@ function getExperienceIcon(poste) {
 
 <template>
   <div class="home-view">
-    <!-- Loader pendant chargement -->
-    <div v-if="loading" class="min-h-screen flex items-center justify-center bg-pastel-blue">
-      <div class="text-center">
-        <div class="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-500 mx-auto mb-4"></div>
-        <p class="text-gray-700 text-lg">Chargement des données...</p>
-      </div>
+    <!-- Message d'erreur si nécessaire -->
+    <div v-if="error" class="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4">
+      <p>{{ error }} - Affichage des données par défaut</p>
     </div>
 
-    <!-- Contenu principal -->
-    <div v-else>
-      <!-- Message d'erreur si nécessaire -->
-      <div v-if="error" class="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-4">
-        <p>{{ error }} - Affichage des données par défaut</p>
-      </div>
-
-      <!-- Section 1: Présentation (Bleu Clair) -->
-      <section class="bg-pastel-blue min-h-screen flex items-center justify-center px-6 py-16">
+    <!-- Section 1: Présentation (Bleu Clair) -->
+    <section class="bg-pastel-blue min-h-screen flex items-center justify-center px-6 py-16">
       <div class="container mx-auto max-w-5xl">
         <div class="flex flex-col md:flex-row items-center gap-12">
           <!-- Photo placeholder -->
           <div class="flex-shrink-0">
-            <div class="w-48 h-48 md:w-64 md:h-64 rounded-full bg-blue-300 flex items-center justify-center text-6xl shadow-lg">
+            <div v-if="loading" class="w-48 h-48 md:w-64 md:h-64 rounded-full bg-blue-200 animate-pulse shadow-lg"></div>
+            <div v-else class="w-48 h-48 md:w-64 md:h-64 rounded-full bg-blue-300 flex items-center justify-center text-6xl shadow-lg">
               👤
             </div>
           </div>
           
           <!-- Infos -->
           <div class="flex-1 text-center md:text-left">
-            <h1 class="text-5xl md:text-6xl font-bold text-gray-800 mb-4">
+            <h1 v-if="loading" class="h-16 bg-gray-300 rounded-lg animate-pulse mb-4"></h1>
+            <h1 v-else class="text-5xl md:text-6xl font-bold text-gray-800 mb-4">
               {{ profile.firstName }} {{ profile.lastName }}
             </h1>
             
             <div class="my-8">
-              <h2 class="text-2xl font-semibold text-gray-700 mb-3">À propos de moi</h2>
-              <p class="text-lg text-gray-600 leading-relaxed">
+              <h2 v-if="loading" class="h-8 w-48 bg-gray-300 rounded animate-pulse mb-3"></h2>
+              <h2 v-else class="text-2xl font-semibold text-gray-700 mb-3">À propos de moi</h2>
+              
+              <div v-if="loading" class="space-y-2">
+                <div class="h-6 bg-gray-300 rounded animate-pulse"></div>
+                <div class="h-6 bg-gray-300 rounded animate-pulse w-5/6"></div>
+                <div class="h-6 bg-gray-300 rounded animate-pulse w-4/6"></div>
+              </div>
+              <p v-else class="text-lg text-gray-600 leading-relaxed">
                 {{ profile.about }}
               </p>
             </div>
             
             <div>
-              <h3 class="text-xl font-semibold text-gray-700 mb-3">Compétences</h3>
-              <div class="flex flex-wrap gap-3 justify-center md:justify-start">
+              <h3 v-if="loading" class="h-7 w-32 bg-gray-300 rounded animate-pulse mb-3"></h3>
+              <h3 v-else class="text-xl font-semibold text-gray-700 mb-3">Compétences</h3>
+              
+              <div v-if="loading" class="flex flex-wrap gap-3 justify-center md:justify-start">
+                <div v-for="n in 6" :key="n" class="h-10 w-24 bg-blue-200 rounded-full animate-pulse"></div>
+              </div>
+              <div v-else class="flex flex-wrap gap-3 justify-center md:justify-start">
                 <span
                   v-for="skill in profile.skills"
                   :key="skill"
@@ -146,10 +150,26 @@ function getExperienceIcon(poste) {
     <!-- Section 2: Timeline Expériences (Blanc) -->
     <section class="bg-white py-20 px-6">
       <div class="container mx-auto max-w-6xl">
-        <h2 class="text-4xl font-bold text-center text-gray-800 mb-16">Mon Parcours</h2>
+        <h2 v-if="loading" class="h-12 w-64 bg-gray-300 rounded-lg animate-pulse mx-auto mb-16"></h2>
+        <h2 v-else class="text-4xl font-bold text-center text-gray-800 mb-16">Mon Parcours</h2>
         
         <!-- Timeline horizontale sur desktop, verticale sur mobile -->
-        <div class="flex flex-col md:flex-row items-center justify-center gap-4 md:gap-8">
+        <div v-if="loading" class="flex flex-col md:flex-row items-center justify-center gap-4 md:gap-8">
+          <div v-for="n in 3" :key="n" class="flex flex-col md:flex-row items-center">
+            <div class="flex flex-col items-center">
+              <div class="w-24 h-24 md:w-28 md:h-28 rounded-full bg-gray-300 animate-pulse shadow-xl"></div>
+              <div class="mt-4 text-center space-y-2">
+                <div class="h-6 w-32 bg-gray-300 rounded animate-pulse mx-auto"></div>
+                <div class="h-4 w-24 bg-gray-300 rounded animate-pulse mx-auto"></div>
+              </div>
+            </div>
+            <div v-if="n < 3" class="flex items-center justify-center my-4 md:my-0 md:mx-6">
+              <div class="hidden md:block text-4xl text-gray-300">→</div>
+              <div class="md:hidden text-4xl text-gray-300 rotate-90">→</div>
+            </div>
+          </div>
+        </div>
+        <div v-else class="flex flex-col md:flex-row items-center justify-center gap-4 md:gap-8">
           <div
             v-for="(exp, index) in experiences"
             :key="exp.id"
@@ -179,9 +199,20 @@ function getExperienceIcon(poste) {
     <!-- Section 3: Projets Principaux (Jaune Clair) -->
     <section class="bg-pastel-yellow py-20 px-6">
       <div class="container mx-auto max-w-6xl">
-        <h2 class="text-4xl font-bold text-center text-gray-800 mb-12">Projets Principaux</h2>
+        <h2 v-if="loading" class="h-12 w-80 bg-gray-300 rounded-lg animate-pulse mx-auto mb-12"></h2>
+        <h2 v-else class="text-4xl font-bold text-center text-gray-800 mb-12">Projets Principaux</h2>
         
-        <div class="grid md:grid-cols-3 gap-8">
+        <div v-if="loading" class="grid md:grid-cols-3 gap-8">
+          <div v-for="n in 3" :key="n" class="bg-white rounded-xl shadow-lg p-6 border-2 border-yellow-300">
+            <div class="h-8 bg-gray-300 rounded animate-pulse mb-3"></div>
+            <div class="space-y-2">
+              <div class="h-4 bg-gray-300 rounded animate-pulse"></div>
+              <div class="h-4 bg-gray-300 rounded animate-pulse"></div>
+              <div class="h-4 bg-gray-300 rounded animate-pulse w-3/4"></div>
+            </div>
+          </div>
+        </div>
+        <div v-else class="grid md:grid-cols-3 gap-8">
           <div
             v-for="project in mainProjects"
             :key="project.id"
@@ -240,7 +271,6 @@ function getExperienceIcon(poste) {
       </div>
     </section>
     </div>
-  </div>
 </template>
 
 <style scoped>

@@ -44,29 +44,37 @@ onMounted(async () => {
 
 <template>
   <div class="projects-view bg-pastel-green min-h-screen py-16 px-6">
-    <!-- Loader -->
-    <div v-if="loading" class="min-h-screen flex items-center justify-center">
-      <div class="text-center">
-        <div class="animate-spin rounded-full h-16 w-16 border-b-4 border-green-600 mx-auto mb-4"></div>
-        <p class="text-gray-700 text-lg">Chargement des projets...</p>
-      </div>
-    </div>
-
-    <!-- Contenu -->
-    <div v-else class="container mx-auto max-w-7xl">
+    <div class="container mx-auto max-w-7xl">
       <!-- Message d'erreur si nécessaire -->
       <div v-if="error" class="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-4 rounded">
         <p>{{ error }} - Affichage des données par défaut</p>
       </div>
 
-      <h1 class="text-5xl font-bold text-center text-gray-800 mb-4">
+      <h1 v-if="loading" class="h-14 w-96 bg-gray-300 rounded-lg animate-pulse mx-auto mb-4"></h1>
+      <h1 v-else class="text-5xl font-bold text-center text-gray-800 mb-4">
         Tous mes Projets
       </h1>
-      <p class="text-center text-gray-600 mb-12 text-lg">
+      
+      <p v-if="loading" class="h-6 w-80 bg-gray-300 rounded animate-pulse mx-auto mb-12"></p>
+      <p v-else class="text-center text-gray-600 mb-12 text-lg">
         Découvrez l'ensemble de mes réalisations techniques
       </p>
       
-      <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+      <div v-if="loading" class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+        <div v-for="n in 6" :key="n" class="bg-white rounded-xl shadow-lg p-6 border-2 border-green-300">
+          <div class="flex justify-between items-start mb-3">
+            <div class="h-8 w-2/3 bg-gray-300 rounded animate-pulse"></div>
+            <div class="h-6 w-16 bg-gray-300 rounded animate-pulse"></div>
+          </div>
+          <div class="space-y-2 mb-4">
+            <div class="h-4 bg-gray-300 rounded animate-pulse"></div>
+            <div class="h-4 bg-gray-300 rounded animate-pulse"></div>
+            <div class="h-4 bg-gray-300 rounded animate-pulse w-5/6"></div>
+          </div>
+          <div class="h-6 w-24 bg-gray-300 rounded animate-pulse"></div>
+        </div>
+      </div>
+      <div v-else class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
         <div
           v-for="project in allProjects"
           :key="project.id"
