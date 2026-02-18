@@ -1,11 +1,17 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useApiCache } from '../composables/useApiCache'
+import { useProjects } from '../composables/useProjects'
+import { formatDateRange, getExperienceIcon } from '../composables/useFormatters'
+import ProjectCard from '../components/ProjectCard.vue'
+import SkillTag from '../components/SkillTag.vue'
+import SkeletonLoader from '../components/SkeletonLoader.vue'
 
 const API_URL = 'http://127.0.0.1:8000'
 const { fetchWithCache } = useApiCache()
+const { fetchFeaturedProjects } = useProjects()
 
-// Mock data statiques
+// Profil statique
 const profile = ref({
   firstName: 'Jean',
   lastName: 'Dupont',
@@ -48,14 +54,9 @@ onMounted(async () => {
     loading.value = false
 
     // Charger les projets principaux en différé (non-bloquant)
-    fetchWithCache(`${API_URL}/projects/featured?limit=3`)
-      .then(projectsData => {
-        mainProjects.value = projectsData.projects.map(p => ({
-          id: p.id,
-          title: p.titre,
-          description: p.description,
-          skills: p.skills || []
-        }))
+    fetchFeaturedProjects(3)
+      .then(projects => {
+        mainProjects.value = projects
         loadingProjects.value = false
       })
       .catch(err => {
@@ -76,25 +77,12 @@ onMounted(async () => {
     ]
     profile.value.skills = ['Vue.js', 'Python', 'FastAPI', 'PostgreSQL', 'Tailwind CSS']
     mainProjects.value = [
-      { id: 1, title: 'Portfolio', description: 'Application portfolio complète' }
+      { id: 1, title: 'Portfolio', description: 'Application portfolio complète', date: '2024', github: '#', lien: null, skills: [] }
     ]
     loading.value = false
+    loadingProjects.value = false
   }
 })
-
-function formatDateRange(debut, fin) {
-  if (!debut) return 'En cours'
-  const year = debut.substring(4, 8) || debut
-  return fin ? `${year}-${fin.substring(4, 8)}` : year
-}
-
-function getExperienceIcon(poste) {
-  if (!poste) return '💼'
-  const lower = poste.toLowerCase()
-  if (lower.includes('école') || lower.includes('étude')) return '🎓'
-  if (lower.includes('stage') || lower.includes('alternance')) return '💼'
-  return '🚀'
-}
 </script>
 
 <template>
@@ -145,13 +133,14 @@ function getExperienceIcon(poste) {
                 <div v-for="n in 6" :key="n" class="h-10 w-24 bg-blue-200 rounded-full animate-pulse"></div>
               </div>
               <div v-else class="flex flex-wrap gap-3 justify-center md:justify-start">
-                <span
+                <SkillTag
                   v-for="skill in profile.skills"
                   :key="skill"
-                  class="px-4 py-2 bg-blue-500 text-white rounded-full text-sm font-medium shadow-md hover:bg-blue-600 transition-colors"
-                >
-                  {{ skill }}
-                </span>
+                  :skill="skill"
+                  variant="default"
+                  size="lg"
+                  class="bg-blue-500 text-white shadow-md hover:bg-blue-600"
+                />
               </div>
             </div>
           </div>
@@ -261,35 +250,15 @@ function getExperienceIcon(poste) {
         <h2 v-else class="text-4xl font-bold text-center text-gray-800 mb-12">Projets Principaux</h2>
         
         <div v-if="loadingProjects" class="grid md:grid-cols-3 gap-8">
-          <div v-for="n in 3" :key="n" class="bg-white rounded-xl shadow-lg p-6 border-2 border-yellow-300">
-            <div class="h-8 bg-gray-300 rounded animate-pulse mb-3"></div>
-            <div class="space-y-2">
-              <div class="h-4 bg-gray-300 rounded animate-pulse"></div>
-              <div class="h-4 bg-gray-300 rounded animate-pulse"></div>
-              <div class="h-4 bg-gray-300 rounded animate-pulse w-3/4"></div>
-            </div>
-          </div>
+          <SkeletonLoader v-for="n in 3" :key="n" type="card" />
         </div>
         <div v-else class="grid md:grid-cols-3 gap-8">
-          <div
+          <ProjectCard
             v-for="project in mainProjects"
             :key="project.id"
-            class="bg-white rounded-xl shadow-lg p-6 hover:shadow-2xl transition-shadow duration-300 border-2 border-yellow-300"
-          >
-            <h3 class="text-2xl font-bold text-gray-800 mb-3">{{ project.title }}</h3>
-            <p class="text-gray-600 leading-relaxed mb-4">{{ project.description }}</p>
-            
-            <!-- Tags de compétences -->
-            <div v-if="project.skills && project.skills.length > 0" class="flex flex-wrap gap-2">
-              <span
-                v-for="skill in project.skills"
-                :key="skill"
-                class="px-3 py-1 bg-yellow-100 text-yellow-700 rounded-full text-xs font-medium"
-              >
-                {{ skill }}
-              </span>
-            </div>
-          </div>
+            :project="project"
+            class="border-yellow-300"
+          />
         </div>
         
         <div class="text-center mt-12">
