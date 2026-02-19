@@ -8,7 +8,7 @@ import SkillTag from '../components/SkillTag.vue'
 import SkeletonLoader from '../components/SkeletonLoader.vue'
 import SkillsSection from '../components/SkillsSection.vue'
 
-const API_URL = 'http://127.0.0.1:8000'
+const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000'
 const { fetchWithCache } = useApiCache()
 const { fetchFeaturedProjects } = useProjects()
 
