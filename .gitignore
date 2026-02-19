@@ -1,0 +1,55 @@
+### Python
+__pycache__/
+*.py[cod]
+*.pyd
+.Python
+*.so
+.env
+.venv/
+venv/
+ENV/
+env/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+coverage.xml
+htmlcov/
+.tox/
+
+### Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.npm
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/sdks
+!.yarn/versions
+dist/
+build/
+.next/
+.nuxt/
+out/
+
+### Logs
+*.log
+
+### OS
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+### IDE
+.vscode/
+.idea/
+*.code-workspace
+
+### Local caches
+.cache/
+tmp/
+temp/
