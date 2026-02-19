@@ -1,13 +1,22 @@
 <script setup>
 import { RouterLink, useRoute } from 'vue-router'
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch, computed } from 'vue'
 
 const route = useRoute()
-const username = ref(null)
+const usernameFromStorage = ref(null)
+
+const username = computed(() => {
+  return localStorage.getItem('username')
+})
+
+// Surveiller les changements de route
+watch(() => route.path, () => {
+  usernameFromStorage.value = localStorage.getItem('username')
+})
 
 onMounted(() => {
-  // Récupérer le username du localStorage
-  username.value = localStorage.getItem('username')
+  // Récupérer le username du localStorage au chargement
+  usernameFromStorage.value = localStorage.getItem('username')
 })
 
 const isActive = (name) => route.name === name
@@ -30,7 +39,7 @@ function logout() {
             Mon Portfolio
           </div>
           <div v-if="username" class="text-sm text-gray-600">
-            👋 Bonjour <span class="font-semibold text-blue-600">{{ username }}</span>
+            Bonjour <span class="font-semibold text-blue-600">{{ username }}</span> 👋 
           </div>
         </div>
         <div class="flex gap-6 items-center">
