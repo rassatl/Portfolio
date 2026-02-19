@@ -18,8 +18,11 @@ export function useApiCache() {
 
     // Sinon, fetch et mettre en cache
     const response = await fetch(url, options)
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+    }
     const data = await response.json()
-    
+
     cache.set(cacheKey, {
       data,
       timestamp: now

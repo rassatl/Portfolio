@@ -7,6 +7,8 @@ export function useFilters(projects) {
   const searchQuery = ref('')
   const selectedSkills = ref([])
   const selectedYears = ref([])
+  const selectedType = ref('') // '', 'professionnel', 'personnel'
+  const selectedExperienceId = ref(null)
   const sortOrder = ref('desc') // 'desc' = plus récent d'abord, 'asc' = plus ancien d'abord
   const filtersExpanded = ref(false)
 
@@ -35,15 +37,15 @@ export function useFilters(projects) {
     // Filtre par recherche texte
     if (searchQuery.value.trim()) {
       const query = searchQuery.value.toLowerCase()
-      result = result.filter(p => 
-        p.title.toLowerCase().includes(query) || 
+      result = result.filter(p =>
+        p.title.toLowerCase().includes(query) ||
         (p.description && p.description.toLowerCase().includes(query))
       )
     }
 
     // Filtre par compétences sélectionnées
     if (selectedSkills.value.length > 0) {
-      result = result.filter(p => 
+      result = result.filter(p =>
         p.skills && selectedSkills.value.some(skill => p.skills.includes(skill))
       )
     }
@@ -57,11 +59,21 @@ export function useFilters(projects) {
       })
     }
 
+    // Filtre par type (professionnel / personnel)
+    if (selectedType.value) {
+      result = result.filter(p => p.type === selectedType.value)
+    }
+
+    // Filtre par experience_id
+    if (selectedExperienceId.value !== null) {
+      result = result.filter(p => p.experience_id === selectedExperienceId.value)
+    }
+
     // Tri par date
     result = [...result].sort((a, b) => {
       const dateA = a.date === 'N/A' ? '' : a.date
       const dateB = b.date === 'N/A' ? '' : b.date
-      
+
       if (sortOrder.value === 'desc') {
         return dateB.localeCompare(dateA)
       } else {
@@ -76,19 +88,23 @@ export function useFilters(projects) {
    * Compte le nombre de filtres actifs
    */
   const activeFiltersCount = computed(() => {
-    return selectedSkills.value.length + 
-           selectedYears.value.length + 
-           (searchQuery.value ? 1 : 0)
+    return selectedSkills.value.length +
+      selectedYears.value.length +
+      (searchQuery.value ? 1 : 0) +
+      (selectedType.value ? 1 : 0) +
+      (selectedExperienceId.value !== null ? 1 : 0)
   })
 
   /**
    * Vérifie si des filtres sont actifs
    */
   const hasActiveFilters = computed(() => {
-    return selectedSkills.value.length > 0 || 
-           selectedYears.value.length > 0 || 
-           searchQuery.value.trim() !== '' ||
-           sortOrder.value === 'asc'
+    return selectedSkills.value.length > 0 ||
+      selectedYears.value.length > 0 ||
+      searchQuery.value.trim() !== '' ||
+      selectedType.value !== '' ||
+      selectedExperienceId.value !== null ||
+      sortOrder.value === 'asc'
   })
 
   /**
@@ -122,6 +138,8 @@ export function useFilters(projects) {
     searchQuery.value = ''
     selectedSkills.value = []
     selectedYears.value = []
+    selectedType.value = ''
+    selectedExperienceId.value = null
     sortOrder.value = 'desc'
   }
 
@@ -130,15 +148,17 @@ export function useFilters(projects) {
     searchQuery,
     selectedSkills,
     selectedYears,
+    selectedType,
+    selectedExperienceId,
     sortOrder,
     filtersExpanded,
-    
+
     // Computed
     availableYears,
     filteredProjects,
     activeFiltersCount,
     hasActiveFilters,
-    
+
     // Méthodes
     toggleSkill,
     toggleYear,

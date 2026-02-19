@@ -8,7 +8,7 @@ const API_URL = 'http://127.0.0.1:8000'
  */
 export function useProjects() {
   const { fetchWithCache } = useApiCache()
-  
+
   const allProjects = ref([])
   const loading = ref(true)
   const error = ref(null)
@@ -19,36 +19,41 @@ export function useProjects() {
   async function fetchProjects() {
     loading.value = true
     error.value = null
-    
+
     try {
       const data = await fetchWithCache(`${API_URL}/projects/search`)
-      
+
       allProjects.value = data.projects.map(p => ({
         id: p.id,
+        experience_id: p.experience_id != null ? p.experience_id : null,
         title: p.titre,
         description: p.description,
         date: p.date_projet || 'N/A',
         github: p.github_url || '#',
         lien: p.lien_url,
         skills: p.skills || [],
+        type: p.type || 'personnel',
         user_id: p.user_id
       }))
-      
+
       loading.value = false
       return allProjects.value
     } catch (err) {
       console.error('Erreur lors du chargement des projets:', err)
       error.value = 'Erreur de chargement des projets'
-      
+
       // Fallback sur données mock
       allProjects.value = [
         {
           id: 1,
+          experience_id: null,
           title: 'Portfolio Dynamique',
           description: 'Application portfolio complète',
           date: '2024',
           github: '#',
-          skills: []
+          lien: null,
+          skills: [],
+          type: 'personnel'
         }
       ]
       loading.value = false
@@ -62,15 +67,17 @@ export function useProjects() {
   async function fetchFeaturedProjects(limit = 3) {
     try {
       const data = await fetchWithCache(`${API_URL}/projects/featured?limit=${limit}`)
-      
+
       return data.projects.map(p => ({
         id: p.id,
+        experience_id: p.experience_id != null ? p.experience_id : null,
         title: p.titre,
         description: p.description,
         date: p.date_projet || 'N/A',
         github: p.github_url || '#',
         lien: p.lien_url,
         skills: p.skills || [],
+        type: p.type || 'personnel',
         user_id: p.user_id
       }))
     } catch (err) {

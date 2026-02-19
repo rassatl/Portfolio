@@ -89,6 +89,16 @@ async function deleteProject() {
 
     <div class="flex justify-between items-start mb-3 gap-4">
       <h2 class="text-2xl font-bold text-gray-800 flex-1">{{ project.title }}</h2>
+      <div class="ml-4 flex items-center gap-2 text-sm">
+        <span
+          :class="[
+            'px-2 py-1 rounded-full font-semibold',
+            project.type === 'professionnel' ? 'bg-purple-100 text-purple-800' : 'bg-teal-100 text-teal-800'
+          ]"
+        >
+          {{ project.type === 'professionnel' ? 'Professionnel' : 'Personnel' }}
+        </span>
+      </div>
       <div class="flex items-center gap-2 whitespace-nowrap">
         <span class="text-sm text-gray-500 font-semibold">
           {{ formatDate(project.date) }}

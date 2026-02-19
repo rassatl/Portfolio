@@ -1,5 +1,6 @@
 <script setup>
 import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { useApiCache } from '../composables/useApiCache'
 import { useProjects } from '../composables/useProjects'
 import { formatDateRange, getExperienceIcon } from '../composables/useFormatters'
@@ -8,9 +9,20 @@ import SkillTag from '../components/SkillTag.vue'
 import SkeletonLoader from '../components/SkeletonLoader.vue'
 import SkillsSection from '../components/SkillsSection.vue'
 
+const router = useRouter()
 const API_URL = 'http://127.0.0.1:8000'
 const { fetchWithCache } = useApiCache()
 const { fetchFeaturedProjects } = useProjects()
+
+// Navigation vers la page projets avec un filtre par compétence
+function navigateToSkill(skill) {
+  router.push({ name: 'projets', query: { skill } })
+}
+
+// Navigation vers la page projets filtrée par expérience
+function navigateToExperience(experienceId) {
+  router.push({ name: 'projets', query: { experience_id: experienceId } })
+}
 
 // Profil statique
 const profile = ref({
@@ -92,7 +104,7 @@ onMounted(async () => {
   try {
     // Charger en priorité : expériences + compétences (contenu critique)
     const [expData, skillsData] = await Promise.all([
-      fetchWithCache(`${API_URL}/experiences?sort=-date_debut`),
+      fetchWithCache(`${API_URL}/experiences?sort=date_debut`),
       fetchWithCache(`${API_URL}/skills/top?k=10`)
     ])
     
@@ -100,6 +112,8 @@ onMounted(async () => {
     experiences.value = expData.experiences.map(exp => ({
       id: exp.id,
       title: exp.poste || exp.structure || 'Expérience',
+      structure: exp.structure || '',
+      ville: exp.ville || '',
       year: formatDateRange(exp.date_debut, exp.date_fin),
       icon: getExperienceIcon(exp.poste)
     }))
@@ -182,103 +196,95 @@ onMounted(async () => {
             </div>
             
             <div>
-              <SkillsSection :skills="profile.skills" :loading="loading" />
+              <SkillsSection :skills="profile.skills" :loading="loading" @skill-click="navigateToSkill" />
             </div>
           </div>
         </div>
       </div>
     </section>
 
-    <!-- Section 2: Timeline Expériences (Blanc) -->
+    <!-- Section 2: Timeline Expériences (Blanc) - HORIZONTALE -->
     <section class="bg-white py-20 px-6">
-      <div class="container mx-auto max-w-6xl">
+      <div class="container mx-auto max-w-7xl">
         <h2 v-if="loading" class="h-12 w-64 bg-gray-300 rounded-lg animate-pulse mx-auto mb-16"></h2>
         <h2 v-else class="text-4xl font-bold text-center text-gray-800 mb-16">Mon Parcours</h2>
         
-        <!-- Timeline avec skeleton -->
-        <div v-if="loading" class="relative">
-          <!-- Ligne centrale skeleton -->
-          <div class="hidden md:block absolute left-1/2 transform -translate-x-1/2 w-1 h-full bg-gray-200"></div>
-          
-          <div class="space-y-12 md:space-y-24">
-            <div v-for="n in 3" :key="n" class="relative">
-              <div class="flex flex-col md:flex-row items-center justify-center gap-8">
-                <div class="md:w-5/12 order-2 md:order-1">
-                  <div class="bg-gray-100 rounded-xl p-6 shadow-md">
-                    <div class="h-6 bg-gray-300 rounded animate-pulse mb-2"></div>
-                    <div class="h-4 bg-gray-300 rounded animate-pulse w-32"></div>
-                  </div>
+        <!-- Timeline horizontale skeleton -->
+        <div v-if="loading" class="relative py-20">
+          <div class="flex gap-8 justify-center px-4">
+            <div v-for="n in 3" :key="n" class="flex-shrink-0 w-56">
+              <div class="flex flex-col items-center">
+                <div class="bg-gray-100 rounded-xl p-5 shadow-md w-full mb-4">
+                  <div class="h-5 bg-gray-300 rounded animate-pulse mb-2"></div>
+                  <div class="h-4 bg-gray-200 rounded animate-pulse w-24"></div>
                 </div>
-                <div class="order-1 md:order-2 relative z-10">
-                  <div class="w-16 h-16 rounded-full bg-gray-300 animate-pulse shadow-xl"></div>
-                </div>
-                <div class="md:w-5/12 order-3"></div>
+                <div class="w-12 h-12 rounded-full bg-gray-300 animate-pulse shadow-lg"></div>
               </div>
             </div>
           </div>
         </div>
         
-        <!-- Timeline réelle -->
+        <!-- Timeline horizontale réelle -->
         <div v-else class="relative">
-          <!-- Ligne centrale (desktop only) -->
-          <div class="hidden md:block absolute left-1/2 transform -translate-x-1/2 w-1 h-full bg-gradient-to-b from-blue-400 via-blue-500 to-blue-600"></div>
-          
-          <!-- Mobile: ligne verticale à gauche -->
-          <div class="md:hidden absolute left-8 top-0 w-1 h-full bg-gradient-to-b from-blue-400 via-blue-500 to-blue-600"></div>
-          
-          <div class="space-y-12 md:space-y-24">
-            <div
-              v-for="(exp, index) in experiences"
-              :key="exp.id"
-              class="relative"
-            >
-              <!-- Desktop: alternance gauche/droite -->
-              <div class="flex flex-col md:flex-row items-center md:items-stretch justify-center gap-8">
-                <!-- Carte à gauche (desktop) ou toujours à droite (mobile) -->
-                <div 
-                  :class="[
-                    'md:w-5/12',
-                    index % 2 === 0 ? 'order-2 md:order-1 md:text-right' : 'order-2 md:order-3 md:text-left'
-                  ]"
+          <!-- Conteneur scrollable -->
+          <div class="timeline-scroll overflow-x-auto">
+            <div class="relative" :style="{ minWidth: experiences.length * 260 + 'px' }">
+              
+              <!-- Ligne horizontale continue -->
+              <div class="absolute left-0 right-0 h-1 bg-gradient-to-r from-blue-300 via-blue-500 to-blue-600 z-0" style="top: 50%;"></div>
+              
+              <!-- Conteneur flex des éléments -->
+              <div class="flex items-center py-4">
+                <div
+                  v-for="(exp, index) in experiences"
+                  :key="exp.id"
+                  class="flex-1 flex flex-col items-center relative"
+                  style="min-width: 240px;"
                 >
-                  <div 
-                    class="bg-white rounded-xl p-6 shadow-lg hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 border-2 border-blue-200 ml-12 md:ml-0"
-                    :class="index % 2 === 0 ? '' : 'md:ml-0'"
+                  <!-- Carte AU-DESSUS (index pair) -->
+                  <div
+                    v-if="index % 2 === 0"
+                    @click="navigateToExperience(exp.id)"
+                    class="bg-white rounded-xl p-4 shadow-lg hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 border-2 border-blue-200 cursor-pointer group mx-3 w-52 mb-4"
                   >
-                    <div class="flex items-center gap-3 mb-2" :class="index % 2 === 0 ? 'md:flex-row-reverse md:justify-start' : ''">
-                      <span class="text-4xl">{{ exp.icon }}</span>
-                      <h3 class="text-2xl font-bold text-gray-800">{{ exp.title }}</h3>
+                    <h3 class="text-lg font-bold text-gray-800 group-hover:text-blue-600 transition-colors mb-1">{{ exp.title }}</h3>
+                    <p v-if="exp.structure" class="text-gray-700 font-medium text-sm mb-1">🏢 {{ exp.structure }}</p>
+                    <p v-if="exp.ville" class="text-gray-500 text-xs mb-1">📍 {{ exp.ville }}</p>
+                    <p class="text-blue-600 font-semibold text-sm mt-1">{{ exp.year }}</p>
+                    <p class="text-xs text-gray-400 mt-1 opacity-0 group-hover:opacity-100 transition-opacity">Voir les projets →</p>
+                  </div>
+                  <!-- Espace vide au-dessus (index impair) -->
+                  <div v-else class="w-52 mb-4" style="min-height: 120px;"></div>
+                  
+                  <!-- Point sur la ligne -->
+                  <div class="relative z-10 flex-shrink-0">
+                    <div class="w-12 h-12 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center shadow-xl border-4 border-white">
+                      <span class="text-lg">{{ exp.icon }}</span>
                     </div>
-                    <p class="text-blue-600 font-semibold text-sm">{{ exp.year }}</p>
+                  </div>
+                  
+                  <!-- Espace vide en-dessous (index pair) -->
+                  <div v-if="index % 2 === 0" class="w-52 mt-4" style="min-height: 120px;"></div>
+                  <!-- Carte EN-DESSOUS (index impair) -->
+                  <div
+                    v-else
+                    @click="navigateToExperience(exp.id)"
+                    class="bg-white rounded-xl p-4 shadow-lg hover:shadow-2xl transition-all duration-300 hover:translate-y-2 border-2 border-blue-200 cursor-pointer group mx-3 w-52 mt-4"
+                  >
+                    <h3 class="text-lg font-bold text-gray-800 group-hover:text-blue-600 transition-colors mb-1">{{ exp.title }}</h3>
+                    <p v-if="exp.structure" class="text-gray-700 font-medium text-sm mb-1">🏢 {{ exp.structure }}</p>
+                    <p v-if="exp.ville" class="text-gray-500 text-xs mb-1">📍 {{ exp.ville }}</p>
+                    <p class="text-blue-600 font-semibold text-sm mt-1">{{ exp.year }}</p>
+                    <p class="text-xs text-gray-400 mt-1 opacity-0 group-hover:opacity-100 transition-opacity">Voir les projets →</p>
                   </div>
                 </div>
-                
-                <!-- Point central -->
-                <div class="order-1 md:order-2 absolute left-8 md:relative md:left-0 z-10 flex items-center">
-                  <div class="w-16 h-16 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center shadow-xl border-4 border-white">
-                    <div class="w-3 h-3 rounded-full bg-white"></div>
-                  </div>
-                </div>
-                
-                <!-- Espace vide de l'autre côté -->
-                <div 
-                  :class="[
-                    'md:w-5/12',
-                    index % 2 === 0 ? 'order-3' : 'order-1'
-                  ]"
-                  class="hidden md:block"
-                ></div>
               </div>
             </div>
           </div>
           
-          <!-- Point final de la timeline -->
-          <div class="relative mt-12 flex items-center justify-center md:justify-center">
-            <div class="absolute left-8 md:relative md:left-0">
-              <div class="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shadow-xl border-4 border-white">
-                <span class="text-xl">🚀</span>
-              </div>
-            </div>
+          <!-- Indicateur de scroll si nécessaire -->
+          <div v-if="experiences.length > 4" class="text-center mt-4 text-sm text-gray-400">
+            ← Faites défiler pour voir plus →
           </div>
         </div>
       </div>
@@ -435,4 +441,19 @@ onMounted(async () => {
 </template>
 
 <style scoped>
+.timeline-scroll::-webkit-scrollbar {
+  height: 6px;
+}
+.timeline-scroll::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 3px;
+}
+.timeline-scroll::-webkit-scrollbar-thumb {
+  background: linear-gradient(to right, #60a5fa, #3b82f6);
+  border-radius: 3px;
+}
+.timeline-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: #3b82f6 #f1f5f9;
+}
 </style>

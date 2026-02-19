@@ -126,6 +126,21 @@
           </div>
         </div>
 
+        <!-- Type de projet -->
+        <div class="mb-7">
+          <label class="block text-sm font-bold text-gray-800 mb-3">💼 Type de projet</label>
+          <div class="flex items-center gap-4">
+            <label class="flex items-center gap-2">
+              <input type="radio" v-model="form.type" value="personnel" class="form-radio" />
+              <span>Personnel</span>
+            </label>
+            <label class="flex items-center gap-2">
+              <input type="radio" v-model="form.type" value="professionnel" class="form-radio" />
+              <span>Professionnel</span>
+            </label>
+          </div>
+        </div>
+
         <!-- Messages -->
         <div v-if="successMessage" class="mb-6 p-4 bg-green-100 text-green-700 rounded-lg border border-green-300 font-semibold">
           ✓ {{ successMessage }}
@@ -170,6 +185,7 @@ const form = ref({
   lien_url: '',
   date_projet: '',
   experience_id: null,
+  type: 'personnel',
   skills: []
 })
 

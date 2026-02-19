@@ -41,6 +41,7 @@ class ProjectRequest(BaseModel):
     date_projet: str | None = None
     experience_id: int | None = None
     skills: list[str] = []
+    type: str | None = 'personnel'
     user_id: int | None = None
 
 class ProjectResponse(BaseModel):
@@ -177,7 +178,7 @@ def search_projects(query: str | None = None, skills: str | None = None):
     # Récupérer les projets avec leurs compétences agrégées
     sql = (
         "SELECT p.id, p.titre, p.description, p.github_url, p.lien_url, p.date_projet, p.experience_id, p.user_id, "
-        "COALESCE(array_agg(c.nom) FILTER (WHERE c.nom IS NOT NULL), '{}') AS skills "
+        "p.type, COALESCE(array_agg(c.nom) FILTER (WHERE c.nom IS NOT NULL), '{}') AS skills "
         "FROM projet p "
         "LEFT JOIN projet_competence pc ON pc.projet_id = p.id "
         "LEFT JOIN competence c ON c.id = pc.competence_id"
@@ -218,7 +219,7 @@ def similar_projects(project_id: int, k: int = 5):
         "WITH target_skills AS ("
         "SELECT competence_id FROM projet_competence WHERE projet_id = %s"
         ") "
-        "SELECT p.id, p.titre, p.description, p.github_url, p.lien_url, p.date_projet, p.experience_id, p.user_id, COUNT(*) AS shared_skills "
+        "SELECT p.id, p.titre, p.description, p.github_url, p.lien_url, p.date_projet, p.experience_id, p.user_id, p.type, COUNT(*) AS shared_skills "
         "FROM projet p "
         "JOIN projet_competence pc ON pc.projet_id = p.id "
         "JOIN target_skills ts ON ts.competence_id = pc.competence_id "
@@ -239,7 +240,7 @@ def featured_projects(limit: int = 3):
     
     sql = (
         "SELECT p.id, p.titre, p.description, p.github_url, p.lien_url, p.date_projet, p.experience_id, p.user_id, "
-        "COALESCE(array_agg(c.nom) FILTER (WHERE c.nom IS NOT NULL), '{}') AS skills "
+        "p.type, COALESCE(array_agg(c.nom) FILTER (WHERE c.nom IS NOT NULL), '{}') AS skills "
         "FROM projet p "
         "LEFT JOIN projet_competence pc ON pc.projet_id = p.id "
         "LEFT JOIN competence c ON c.id = pc.competence_id "
@@ -304,10 +305,10 @@ def create_project(request: ProjectRequest):
     try:
         logging.info(f"Creating project with data: {request.dict()}")
         
-        # Insérer le projet
+        # Insérer le projet (inclut le champ `type`)
         insert_sql = (
-            "INSERT INTO projet (titre, description, github_url, lien_url, date_projet, experience_id, user_id) "
-            "VALUES (%s, %s, %s, %s, %s, %s, %s) "
+            "INSERT INTO projet (titre, description, github_url, lien_url, date_projet, experience_id, type, user_id) "
+            "VALUES (%s, %s, %s, %s, %s, %s, %s, %s) "
             "RETURNING id;"
         )
         result = run_query(
@@ -319,6 +320,7 @@ def create_project(request: ProjectRequest):
                 request.lien_url,
                 request.date_projet,
                 request.experience_id,
+                request.type,
                 request.user_id
             ),
             single=True

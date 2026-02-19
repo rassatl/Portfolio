@@ -12,6 +12,8 @@ const props = defineProps({
   }
 })
 
+const emit = defineEmits(['skill-click'])
+
 // Catégoriser les compétences par type
 const skillCategories = {
   'Frontend': ['Vue.js', 'React', 'JavaScript', 'TypeScript', 'Tailwind', 'HTML', 'CSS', 'Vite'],
@@ -114,8 +116,9 @@ const categoryColors = {
           <button
             v-for="skill in categorySkills"
             :key="skill"
+            @click="emit('skill-click', skill)"
             :class="[
-              'px-2 py-1 rounded-full font-medium text-white text-xs transition-all duration-200',
+              'px-2 py-1 rounded-full font-medium text-white text-xs transition-all duration-200 cursor-pointer',
               'hover:shadow-lg hover:scale-105 active:scale-95',
               categoryColors[category].tag
             ]"
