@@ -6,6 +6,7 @@ import { formatDateRange, getExperienceIcon } from '../composables/useFormatters
 import ProjectCard from '../components/ProjectCard.vue'
 import SkillTag from '../components/SkillTag.vue'
 import SkeletonLoader from '../components/SkeletonLoader.vue'
+import SkillsSection from '../components/SkillsSection.vue'
 
 const API_URL = 'http://127.0.0.1:8000'
 const { fetchWithCache } = useApiCache()
@@ -126,22 +127,7 @@ onMounted(async () => {
             </div>
             
             <div>
-              <h3 v-if="loading" class="h-7 w-32 bg-gray-300 rounded animate-pulse mb-3"></h3>
-              <h3 v-else class="text-xl font-semibold text-gray-700 mb-3">Compétences</h3>
-              
-              <div v-if="loading" class="flex flex-wrap gap-3 justify-center md:justify-start">
-                <div v-for="n in 6" :key="n" class="h-10 w-24 bg-blue-200 rounded-full animate-pulse"></div>
-              </div>
-              <div v-else class="flex flex-wrap gap-3 justify-center md:justify-start">
-                <SkillTag
-                  v-for="skill in profile.skills"
-                  :key="skill"
-                  :skill="skill"
-                  variant="default"
-                  size="lg"
-                  class="bg-blue-500 text-white shadow-md hover:bg-blue-600"
-                />
-              </div>
+              <SkillsSection :skills="profile.skills" :loading="loading" />
             </div>
           </div>
         </div>
