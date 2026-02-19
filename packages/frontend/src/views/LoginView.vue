@@ -49,6 +49,9 @@ async function handleLogin() {
       localStorage.setItem('user_id', data.user_id)
       localStorage.setItem('username', username.value)
       
+      // Notifier les autres composants dans le même onglet
+      window.dispatchEvent(new Event('auth-changed'))
+
       // Rediriger vers la page d'accueil
       router.push('/')
     }
