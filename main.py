@@ -3,14 +3,26 @@ import logging
 from typing import Union
 
 import psycopg
+import bcrypt
 from psycopg.rows import dict_row
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
 
 load_dotenv()
 
 app = FastAPI()
+
+# Modèle pour la login
+class LoginRequest(BaseModel):
+    username: str
+    password: str
+
+class LoginResponse(BaseModel):
+    success: bool
+    message: str
+    user_id: int | None = None
 
 # Configuration CORS
 app.add_middleware(
@@ -196,3 +208,43 @@ def featured_projects(limit: int = 3):
 @app.get("/items/{item_id}")
 def read_item(item_id: int, q: Union[str, None] = None):
     return {"item_id": item_id, "q": q}
+
+
+@app.post("/login")
+def login(request: LoginRequest):
+    """
+    Route de connexion - Vérifie les identifiants de l'utilisateur
+    """
+    try:
+        # Chercher l'utilisateur par username
+        user = run_query(
+            'SELECT id, username, password_hash FROM users WHERE username = %s;',
+            (request.username,),
+            single=True
+        )
+        
+        # Vérifier que l'utilisateur existe
+        if not user:
+            raise HTTPException(status_code=401, detail="Identifiants invalides")
+        
+        # Vérifier le password avec bcrypt
+        password_correct = bcrypt.checkpw(
+            request.password.encode('utf-8'),
+            user['password_hash'].encode('utf-8')
+        )
+        
+        if not password_correct:
+            raise HTTPException(status_code=401, detail="Identifiants invalides")
+        
+        # Connexion réussie
+        return LoginResponse(
+            success=True,
+            message="Connexion réussie",
+            user_id=user['id']
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.exception("Erreur lors de la connexion: %s", e)
+        raise HTTPException(status_code=500, detail="Erreur serveur")
