@@ -1,24 +1,24 @@
 import os
 import logging
-from typing import Union
-
-from pydantic import BaseModel, EmailStr
-
-class Contact(BaseModel):
-    name: str
-    email: EmailStr
-    message: str
-from pymongo import MongoClient
-from pymongo.server_api import ServerApi
-import psycopg
 import json
 from datetime import datetime
-from psycopg.rows import dict_row
+from typing import Union
+
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel, EmailStr, Field
+import psycopg
+from psycopg.rows import dict_row
+from pymongo import MongoClient
+from pymongo.server_api import ServerApi
 
 load_dotenv()
+    
+class Contact(BaseModel):
+    name: str = Field(..., min_length=1)
+    email: EmailStr
+    message: str = Field(..., min_length=1)
 
 app = FastAPI()
 
@@ -45,12 +45,8 @@ if MONGODB_URI:
         # Ping check
         mongo_client.admin.command('ping')
         logging.info("Connected to MongoDB (Ping Successful)")
-        logging.info("Connected to MongoDB")
     except Exception as e:
         logging.error(f"Failed to connect to MongoDB: {e}")
-
-
-
 
 
 def run_query(sql: str, params: tuple | list | None = None, single: bool = False):
