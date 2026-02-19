@@ -2,7 +2,17 @@ import os
 import logging
 from typing import Union
 
+from pydantic import BaseModel, EmailStr
+
+class Contact(BaseModel):
+    name: str
+    email: EmailStr
+    message: str
+from pymongo import MongoClient
+from pymongo.server_api import ServerApi
 import psycopg
+import json
+from datetime import datetime
 from psycopg.rows import dict_row
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Query
@@ -22,6 +32,25 @@ app.add_middleware(
 )
 
 DATABASE_URL = os.getenv("DATABASE_URL")
+MONGODB_URI = os.getenv("MONGODB_URI")
+MONGODB_DB = os.getenv("MONGODB_DB", "portfolio_content")
+
+# Connexion MongoDB
+mongo_client = None
+db = None
+if MONGODB_URI:
+    try:
+        mongo_client = MongoClient(MONGODB_URI, server_api=ServerApi('1'), serverSelectionTimeoutMS=5000)
+        db = mongo_client[MONGODB_DB]
+        # Ping check
+        mongo_client.admin.command('ping')
+        logging.info("Connected to MongoDB (Ping Successful)")
+        logging.info("Connected to MongoDB")
+    except Exception as e:
+        logging.error(f"Failed to connect to MongoDB: {e}")
+
+
+
 
 
 def run_query(sql: str, params: tuple | list | None = None, single: bool = False):
@@ -196,3 +225,40 @@ def featured_projects(limit: int = 3):
 @app.get("/items/{item_id}")
 def read_item(item_id: int, q: Union[str, None] = None):
     return {"item_id": item_id, "q": q}
+
+@app.post("/contact")
+def create_contact(contact: Contact):
+    contact_dict = contact.model_dump()
+    contact_dict["date"] = datetime.now().isoformat()
+
+    # Try MongoDB first if available
+    if db is not None:
+        try:
+            result = db.contact_messages.insert_one(contact_dict)
+            return {"id": str(result.inserted_id), "message": "Contact saved successfully (MongoDB)"}
+        except Exception as e:
+            logging.warning(f"MongoDB insertion failed, falling back to local storage: {e}")
+    
+    # Fallback: Save to local JSON file
+    try:
+        # Remove _id added by PyMongo if present
+        contact_dict.pop("_id", None)
+        
+        file_path = "contacts.json"
+        contacts = []
+        if os.path.exists(file_path):
+            try:
+                with open(file_path, "r", encoding="utf-8") as f:
+                    contacts = json.load(f)
+            except json.JSONDecodeError:
+                contacts = [] # Corrupt file, start fresh
+        
+        contacts.append(contact_dict)
+        
+        with open(file_path, "w", encoding="utf-8") as f:
+            json.dump(contacts, f, indent=2)
+            
+        return {"id": "local", "message": "Contact saved successfully (Local Fallback)"}
+    except Exception as e:
+        logging.error(f"Error saving contact locally: {e}")
+        raise HTTPException(status_code=500, detail="Failed to save contact")
