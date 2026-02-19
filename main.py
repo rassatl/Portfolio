@@ -3,14 +3,44 @@ import logging
 from typing import Union
 
 import psycopg
+import bcrypt
 from psycopg.rows import dict_row
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
 
 load_dotenv()
 
 app = FastAPI()
+
+# Modèle pour la login
+class LoginRequest(BaseModel):
+    username: str
+    password: str
+
+class LoginResponse(BaseModel):
+    success: bool
+    message: str
+    user_id: int | None = None
+
+class ProjectRequest(BaseModel):
+    titre: str
+    description: str
+    github_url: str | None = None
+    lien_url: str | None = None
+    date_projet: str | None = None
+    experience_id: int | None = None
+    skills: list[str] = []
+    user_id: int | None = None
+
+class ProjectResponse(BaseModel):
+    success: bool
+    message: str
+    project_id: int | None = None
+
+class DeleteProjectRequest(BaseModel):
+    user_id: int
 
 # Configuration CORS
 app.add_middleware(
@@ -36,7 +66,11 @@ def run_query(sql: str, params: tuple | list | None = None, single: bool = False
         ) as conn:
             with conn.cursor() as cur:
                 cur.execute(sql, params)
-                return cur.fetchone() if single else cur.fetchall()
+                # Pour les SELECT ou les opérations avec RETURNING, fetch les résultats
+                if sql.strip().upper().startswith('SELECT') or 'RETURNING' in sql.upper():
+                    return cur.fetchone() if single else cur.fetchall()
+                # Pour les autres opérations (DELETE, UPDATE, INSERT sans RETURNING)
+                return None
     except psycopg.Error as exc:
         logging.exception("Database connection failed: %s", exc)
         raise HTTPException(status_code=500, detail="Database connection failed")
@@ -118,7 +152,7 @@ def search_projects(query: str | None = None, skills: str | None = None):
     
     # Récupérer les projets avec leurs compétences agrégées
     sql = (
-        "SELECT p.*, "
+        "SELECT p.id, p.titre, p.description, p.github_url, p.lien_url, p.date_projet, p.experience_id, p.user_id, "
         "COALESCE(array_agg(c.nom) FILTER (WHERE c.nom IS NOT NULL), '{}') AS skills "
         "FROM projet p "
         "LEFT JOIN projet_competence pc ON pc.projet_id = p.id "
@@ -160,7 +194,7 @@ def similar_projects(project_id: int, k: int = 5):
         "WITH target_skills AS ("
         "SELECT competence_id FROM projet_competence WHERE projet_id = %s"
         ") "
-        "SELECT p.*, COUNT(*) AS shared_skills "
+        "SELECT p.id, p.titre, p.description, p.github_url, p.lien_url, p.date_projet, p.experience_id, p.user_id, COUNT(*) AS shared_skills "
         "FROM projet p "
         "JOIN projet_competence pc ON pc.projet_id = p.id "
         "JOIN target_skills ts ON ts.competence_id = pc.competence_id "
@@ -180,7 +214,7 @@ def featured_projects(limit: int = 3):
         raise HTTPException(status_code=400, detail="limit must be between 1 and 10")
     
     sql = (
-        "SELECT p.*, "
+        "SELECT p.id, p.titre, p.description, p.github_url, p.lien_url, p.date_projet, p.experience_id, p.user_id, "
         "COALESCE(array_agg(c.nom) FILTER (WHERE c.nom IS NOT NULL), '{}') AS skills "
         "FROM projet p "
         "LEFT JOIN projet_competence pc ON pc.projet_id = p.id "
@@ -196,3 +230,157 @@ def featured_projects(limit: int = 3):
 @app.get("/items/{item_id}")
 def read_item(item_id: int, q: Union[str, None] = None):
     return {"item_id": item_id, "q": q}
+
+
+@app.post("/login")
+def login(request: LoginRequest):
+    """
+    Route de connexion - Vérifie les identifiants de l'utilisateur
+    """
+    try:
+        # Chercher l'utilisateur par username
+        user = run_query(
+            'SELECT id, username, password_hash FROM users WHERE username = %s;',
+            (request.username,),
+            single=True
+        )
+        
+        # Vérifier que l'utilisateur existe
+        if not user:
+            raise HTTPException(status_code=401, detail="Identifiants invalides")
+        
+        # Vérifier le password avec bcrypt
+        password_correct = bcrypt.checkpw(
+            request.password.encode('utf-8'),
+            user['password_hash'].encode('utf-8')
+        )
+        
+        if not password_correct:
+            raise HTTPException(status_code=401, detail="Identifiants invalides")
+        
+        # Connexion réussie
+        return LoginResponse(
+            success=True,
+            message="Connexion réussie",
+            user_id=user['id']
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.exception("Erreur lors de la connexion: %s", e)
+        raise HTTPException(status_code=500, detail="Erreur serveur")
+
+
+@app.post("/projects")
+def create_project(request: ProjectRequest):
+    """
+    Route de création de projet - Ajoute un nouveau projet à la base de données
+    """
+    try:
+        logging.info(f"Creating project with data: {request.dict()}")
+        
+        # Insérer le projet
+        insert_sql = (
+            "INSERT INTO projet (titre, description, github_url, lien_url, date_projet, experience_id, user_id) "
+            "VALUES (%s, %s, %s, %s, %s, %s, %s) "
+            "RETURNING id;"
+        )
+        result = run_query(
+            insert_sql,
+            (
+                request.titre,
+                request.description,
+                request.github_url,
+                request.lien_url,
+                request.date_projet,
+                request.experience_id,
+                request.user_id
+            ),
+            single=True
+        )
+        
+        if not result:
+            raise HTTPException(status_code=500, detail="Erreur lors de la création du projet")
+        
+        project_id = result['id']
+        
+        # Ajouter les compétences si fournies
+        if request.skills:
+            for skill_name in request.skills:
+                # Chercher ou créer la compétence
+                skill = run_query(
+                    "SELECT id FROM competence WHERE nom = %s;",
+                    (skill_name,),
+                    single=True
+                )
+                
+                if skill:
+                    skill_id = skill['id']
+                else:
+                    # Créer la compétence si elle n'existe pas
+                    skill_result = run_query(
+                        "INSERT INTO competence (nom) VALUES (%s) RETURNING id;",
+                        (skill_name,),
+                        single=True
+                    )
+                    skill_id = skill_result['id']
+                
+                # Ajouter la relation projet-compétence
+                run_query(
+                    "INSERT INTO projet_competence (projet_id, competence_id) VALUES (%s, %s);",
+                    (project_id, skill_id)
+                )
+        
+        return ProjectResponse(
+            success=True,
+            message="Projet créé avec succès",
+            project_id=project_id
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.exception("Erreur lors de la création du projet: %s", e)
+        raise HTTPException(status_code=500, detail="Erreur serveur")
+
+
+@app.delete("/projects/{project_id}")
+def delete_project(project_id: int, request: DeleteProjectRequest):
+    """
+    Route de suppression de projet - Supprime un projet si l'utilisateur en est le propriétaire
+    """
+    try:
+        # Vérifier que le projet existe et appartient à l'utilisateur
+        project = run_query(
+            "SELECT id, user_id FROM projet WHERE id = %s;",
+            (project_id,),
+            single=True
+        )
+        
+        if not project:
+            raise HTTPException(status_code=404, detail="Projet non trouvé")
+        
+        # Vérifier que l'utilisateur est le propriétaire
+        if project['user_id'] != request.user_id:
+            raise HTTPException(status_code=403, detail="Vous ne pouvez pas supprimer ce projet")
+        
+        # Supprimer les relations projet_competence
+        run_query(
+            "DELETE FROM projet_competence WHERE projet_id = %s;",
+            (project_id,)
+        )
+        
+        # Supprimer le projet
+        run_query(
+            "DELETE FROM projet WHERE id = %s;",
+            (project_id,)
+        )
+        
+        return {"success": True, "message": "Projet supprimé avec succès"}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.exception("Erreur lors de la suppression du projet: %s", e)
+        raise HTTPException(status_code=500, detail="Erreur serveur")
