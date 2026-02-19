@@ -1,5 +1,6 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted, onActivated } from 'vue'
+import { useRoute } from 'vue-router'
 import { useApiCache } from '../composables/useApiCache'
 import { useProjects } from '../composables/useProjects'
 import { useFilters } from '../composables/useFilters'
@@ -7,6 +8,7 @@ import ProjectCard from '../components/ProjectCard.vue'
 import FilterPanel from '../components/FilterPanel.vue'
 import SkeletonLoader from '../components/SkeletonLoader.vue'
 
+const route = useRoute()
 const API_URL = 'http://127.0.0.1:8000'
 const { fetchWithCache } = useApiCache()
 
@@ -18,6 +20,8 @@ const {
   searchQuery,
   selectedSkills,
   selectedYears,
+  selectedType,
+  selectedExperienceId,
   sortOrder,
   filtersExpanded,
   availableYears,
@@ -30,6 +34,36 @@ const {
 } = useFilters(allProjects)
 
 const allSkills = ref([])
+const experienceLabel = ref('')
+
+// Applique les filtres depuis les query params
+function applyQueryFilters() {
+  const skill = route.query.skill
+  const expId = route.query.experience_id
+
+  if (skill && !selectedSkills.value.includes(skill)) {
+    resetFilters()
+    selectedSkills.value.push(skill)
+    filtersExpanded.value = true
+  } else if (expId) {
+    const id = parseInt(expId)
+    if (!isNaN(id) && selectedExperienceId.value !== id) {
+      resetFilters()
+      selectedExperienceId.value = id
+      filtersExpanded.value = true
+      // Charger le nom de l'expérience
+      fetchWithCache(`${API_URL}/experiences/${id}/full`)
+        .then(data => {
+          experienceLabel.value = data.experience
+            ? `${data.experience.poste || ''} — ${data.experience.structure || ''}`.replace(/ — $/, '')
+            : `Expérience #${id}`
+        })
+        .catch(() => {
+          experienceLabel.value = `Expérience #${id}`
+        })
+    }
+  }
+}
 
 // Récupération des projets et compétences depuis l'API
 onMounted(async () => {
@@ -38,9 +72,15 @@ onMounted(async () => {
     allSkills.value = skillsData.skills.map(s => s.nom)
     
     await fetchProjects()
+    applyQueryFilters()
   } catch (err) {
     console.error('Erreur lors du chargement:', err)
   }
+})
+
+// Ré-appliquer le filtre quand on revient sur la page (keep-alive)
+onActivated(() => {
+  applyQueryFilters()
 })
 
 </script>
@@ -71,6 +111,7 @@ onMounted(async () => {
         :search-query="searchQuery"
         :selected-skills="selectedSkills"
         :selected-years="selectedYears"
+        :selected-type="selectedType"
         :sort-order="sortOrder"
         :filters-expanded="filtersExpanded"
         :all-skills="allSkills"
@@ -79,12 +120,14 @@ onMounted(async () => {
         :total-count="allProjects.length"
         :active-filters-count="activeFiltersCount"
         :has-active-filters="hasActiveFilters"
+        :experience-label="experienceLabel"
         @update:search-query="searchQuery = $event"
         @update:sort-order="sortOrder = $event"
+        @update:selected-type="selectedType = $event"
         @update:filters-expanded="filtersExpanded = $event"
         @toggle-skill="toggleSkill"
         @toggle-year="toggleYear"
-        @reset-filters="resetFilters"
+        @reset-filters="resetFilters(); experienceLabel = ''"
       />
       
       <!-- Message si aucun résultat -->
@@ -93,7 +136,7 @@ onMounted(async () => {
         <h3 class="text-2xl font-bold text-gray-700 mb-2">Aucun projet trouvé</h3>
         <p class="text-gray-600 mb-4">Essayez de modifier vos filtres ou votre recherche</p>
         <button
-          @click="resetFilters"
+          @click="resetFilters(); experienceLabel = ''"
           class="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
         >
           Réinitialiser les filtres

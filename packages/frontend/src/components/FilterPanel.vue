@@ -14,6 +14,10 @@ const props = defineProps({
     type: Array,
     required: true
   },
+  selectedType: {
+    type: String,
+    default: ''
+  },
   sortOrder: {
     type: String,
     required: true
@@ -45,12 +49,17 @@ const props = defineProps({
   hasActiveFilters: {
     type: Boolean,
     default: false
+  },
+  experienceLabel: {
+    type: String,
+    default: ''
   }
 })
 
 const emit = defineEmits([
   'update:searchQuery',
   'update:sortOrder',
+  'update:selectedType',
   'update:filtersExpanded',
   'toggleSkill',
   'toggleYear',
@@ -152,6 +161,49 @@ const emit = defineEmits([
               {{ year }}
               <span v-if="selectedYears.includes(year)" class="ml-1">✓</span>
             </button>
+          </div>
+        </div>
+
+        <!-- Filtre par type de projet -->
+        <div class="mb-6">
+          <label class="block text-sm font-semibold text-gray-700 mb-3">
+            💼 Type de projet
+          </label>
+          <div class="flex gap-2">
+            <button
+              @click="emit('update:selectedType', selectedType === 'professionnel' ? '' : 'professionnel')"
+              :class="[
+                'px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 flex items-center gap-2',
+                selectedType === 'professionnel'
+                  ? 'bg-purple-600 text-white shadow-md scale-105'
+                  : 'bg-gray-100 text-gray-700 hover:bg-purple-100 hover:text-purple-700'
+              ]"
+            >
+              <span>🏢</span>
+              <span>Professionnel</span>
+              <span v-if="selectedType === 'professionnel'" class="ml-1">✓</span>
+            </button>
+            <button
+              @click="emit('update:selectedType', selectedType === 'personnel' ? '' : 'personnel')"
+              :class="[
+                'px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 flex items-center gap-2',
+                selectedType === 'personnel'
+                  ? 'bg-teal-600 text-white shadow-md scale-105'
+                  : 'bg-gray-100 text-gray-700 hover:bg-teal-100 hover:text-teal-700'
+              ]"
+            >
+              <span>🏠</span>
+              <span>Personnel</span>
+              <span v-if="selectedType === 'personnel'" class="ml-1">✓</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Info filtre par expérience -->
+        <div v-if="experienceLabel" class="mb-6">
+          <div class="flex items-center gap-2 px-4 py-3 bg-blue-50 border border-blue-200 rounded-lg">
+            <span class="text-lg">🎯</span>
+            <span class="text-sm text-blue-800 font-medium">Filtré par expérience : <strong>{{ experienceLabel }}</strong></span>
           </div>
         </div>
 
