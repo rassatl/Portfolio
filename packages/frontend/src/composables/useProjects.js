@@ -32,7 +32,8 @@ export function useProjects() {
         github: p.github_url || '#',
         lien: p.lien_url,
         skills: p.skills || [],
-        type: p.type || 'personnel'
+        type: p.type || 'personnel',
+        user_id: p.user_id
       }))
 
       loading.value = false
@@ -76,7 +77,8 @@ export function useProjects() {
         github: p.github_url || '#',
         lien: p.lien_url,
         skills: p.skills || [],
-        type: p.type || 'personnel'
+        type: p.type || 'personnel',
+        user_id: p.user_id
       }))
     } catch (err) {
       console.error('Erreur lors du chargement des projets mis en avant:', err)

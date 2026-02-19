@@ -44,6 +44,61 @@ const contact = ref({
   linkedin: 'https://linkedin.com/in/lou-rassat'
 })
 
+
+const contactForm = ref({
+  name: '',
+  email: '',
+  message: ''
+})
+const submitStatus = ref(null) // 'success', 'error', 'loading', 'invalid_input'
+const errors = ref({
+  name: false,
+  email: false,
+  message: false
+})
+
+const validateEmail = (email) => {
+  return String(email)
+    .toLowerCase()
+    .match(
+      /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/
+    )
+}
+
+const submitContact = async () => {
+  // Reset errors
+  errors.value = {
+    name: !contactForm.value.name.trim(),
+    email: !validateEmail(contactForm.value.email),
+    message: !contactForm.value.message.trim()
+  }
+
+  if (errors.value.name || errors.value.email || errors.value.message) {
+    submitStatus.value = 'invalid_input'
+    return
+  }
+
+  submitStatus.value = 'loading'
+  try {
+    const response = await fetch(`${API_URL}/contact`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(contactForm.value)
+    })
+    
+    if (!response.ok) throw new Error('Erreur réseau')
+    
+    submitStatus.value = 'success'
+    contactForm.value = { name: '', email: '', message: '' }
+    setTimeout(() => submitStatus.value = null, 3000)
+  } catch (e) {
+    console.error(e)
+    submitStatus.value = 'error'
+  }
+}
+
 // Récupération des données depuis l'API
 onMounted(async () => {
   try {
@@ -297,6 +352,88 @@ onMounted(async () => {
             <span class="text-3xl">💼</span>
             <span>LinkedIn</span>
           </a>
+        </div>
+
+        <!-- Formulaire de Contact -->
+        <div class="mt-12 max-w-lg mx-auto bg-white rounded-xl shadow-lg p-8">
+          <h3 class="text-2xl font-bold text-gray-800 mb-6 font-handwriting">Envoyez-moi un message</h3>
+          
+          <form @submit.prevent="submitContact" class="space-y-4" novalidate>
+            <div>
+              <label for="name" class="block text-left text-gray-700 font-medium mb-1">Nom</label>
+              <input 
+                v-model="contactForm.name"
+                type="text" 
+                id="name" 
+                @input="errors.name = false"
+                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-300 focus:border-red-300 outline-none transition-all"
+                :class="{'border-red-500 focus:border-red-500 focus:ring-red-200': errors.name}"
+                placeholder="Votre nom"
+              >
+              <div v-if="errors.name" class="text-red-500 text-sm mt-1 flex items-center gap-1 animate-pulse">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                  <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+                </svg>
+                <span>Ce champ est requis</span>
+              </div>
+            </div>
+            
+            <div>
+              <label for="email" class="block text-left text-gray-700 font-medium mb-1">Email</label>
+              <input 
+                v-model="contactForm.email"
+                type="email" 
+                id="email" 
+                @input="errors.email = false"
+                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-300 focus:border-red-300 outline-none transition-all"
+                :class="{'border-red-500 focus:border-red-500 focus:ring-red-200': errors.email}"
+                placeholder="votre@email.com"
+              >
+              <div v-if="errors.email" class="flex items-center gap-2 mt-2 text-red-500 text-sm font-medium animate-pulse">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                  <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+                </svg>
+                <span>{{ contactForm.email ? 'Adresse email invalide' : 'Ce champ est requis' }}</span>
+              </div>
+            </div>
+            
+            <div>
+              <label for="message" class="block text-left text-gray-700 font-medium mb-1">Message</label>
+              <textarea 
+                v-model="contactForm.message"
+                id="message" 
+                rows="4" 
+                @input="errors.message = false"
+                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-300 focus:border-red-300 outline-none transition-all resize-none"
+                :class="{'border-red-500 focus:border-red-500 focus:ring-red-200': errors.message}"
+                placeholder="Votre message..."
+              ></textarea>
+              <div v-if="errors.message" class="text-red-500 text-sm mt-1 flex items-center gap-1 animate-pulse">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                  <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+                </svg>
+                <span>Ce champ est requis</span>
+              </div>
+            </div>
+            
+            <button 
+              type="submit" 
+              :disabled="submitStatus === 'loading'"
+              class="w-full bg-red-400 hover:bg-red-500 text-white font-bold py-3 px-6 rounded-lg shadow-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <span v-if="submitStatus === 'loading'">Envoi en cours...</span>
+              <span v-else>Envoyer</span>
+            </button>
+            
+            <p v-if="submitStatus === 'success'" class="text-green-600 font-medium mt-2">Message envoyé avec succès !</p>
+            <p v-if="submitStatus === 'error'" class="text-red-600 font-medium mt-2">Une erreur est survenue.</p>
+            <div v-if="submitStatus === 'invalid_email'" class="flex items-center gap-2 mt-2 text-red-500 text-sm font-medium animate-pulse">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+              </svg>
+              <span>Adresse email invalide</span>
+            </div>
+          </form>
         </div>
       </div>
     </section>

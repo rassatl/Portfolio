@@ -1,6 +1,6 @@
 <script setup>
 import { ref, computed, onMounted, onActivated } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, RouterLink } from 'vue-router'
 import { useApiCache } from '../composables/useApiCache'
 import { useProjects } from '../composables/useProjects'
 import { useFilters } from '../composables/useFilters'
@@ -65,6 +65,16 @@ function applyQueryFilters() {
   }
 }
 
+const username = ref(localStorage.getItem('username'))
+
+const handleProjectDeleted = (projectId) => {
+  // Supprimer le projet de la liste allProjects
+  const index = allProjects.value.findIndex(p => p.id === projectId)
+  if (index !== -1) {
+    allProjects.value.splice(index, 1)
+  }
+}
+
 // Récupération des projets et compétences depuis l'API
 onMounted(async () => {
   try {
@@ -104,6 +114,16 @@ onActivated(() => {
       <p v-else class="text-center text-gray-600 mb-8 text-lg">
         Découvrez l'ensemble de mes réalisations techniques
       </p>
+      
+      <!-- Bouton créer nouveau projet si connecté -->
+      <div v-if="username" class="flex justify-center mb-8">
+        <RouterLink
+          to="/projets/nouveau"
+          class="px-6 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors duration-200 font-medium"
+        >
+          ➕ Nouveau projet
+        </RouterLink>
+      </div>
       
       <!-- Panel de filtres -->
       <FilterPanel
@@ -154,6 +174,7 @@ onActivated(() => {
           v-for="project in filteredProjects"
           :key="project.id"
           :project="project"
+          @project-deleted="handleProjectDeleted"
         />
       </div>
       
